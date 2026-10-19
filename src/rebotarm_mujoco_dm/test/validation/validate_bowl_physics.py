@@ -8,7 +8,7 @@ import sys
 import tempfile
 import xml.etree.ElementTree as ET
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 from rebotarm_mujoco_dm.model_paths import prepare_scene
 

@@ -12,9 +12,8 @@ rebotarm_mujoco_dm/
 │   ├── controllers.yaml               # ros2_control hardware interface overrides
 │   ├── rviz.rviz                      # RViz display configuration
 │   ├── scenes/                        # Scene-specific task parameters
-│   │   ├── rail_scan_params.yaml      # Coordinates, dwell times, puzzle map
-│   │   ├── bowl_params.yaml           # Single bowl transfer parameters
-│   │   └── two_bowls_params.yaml      # Two-bowl batch parameters
+│   │   ├── slider_params.yaml         # Generated slider targets + mission tuning
+│   │   └── rail_scan_params.yaml      # Coordinates, dwell times, puzzle map
 │   └── urdf/                          # Robot URDF & ros2_control descriptions
 │       ├── rebotarm_dm.urdf.xacro
 │       └── rebotarm_dm.ros2_control.xacro
@@ -24,6 +23,7 @@ rebotarm_mujoco_dm/
 │   ├── robot/                         # Pure arm MJCF definition
 │   │   └── dm_arm.xml
 │   └── scenes/                        # Environment & task MJCF models
+│       ├── dm_slider.xml              # CAD 3-rail slider (no plate), catch tray, 3 balls
 │       ├── dm_rail_scan.xml           # 3 sorting rails, optical scan station, 6 balls
 │       ├── dm_two_bowls.xml           # 2 wooden bowls, 5 balls
 │       ├── dm_bowl.xml                # 1 wooden bowl, 1 ball
@@ -34,13 +34,24 @@ rebotarm_mujoco_dm/
 │   │   ├── scene_bridge.py            # Free joint / collision object publisher
 │   │   ├── scene_geometry.py          # Collision shape extractors
 │   │   ├── pose_adapter.py            # Action server bridging MoveToPose
-│   │   └── pose_requests.py           # Trajectory request builders
+│   │   ├── pose_requests.py           # Trajectory request builders
+│   │   └── wait_for_scene.py          # Launch helper: waits until the scene is ready
 │   ├── core/                          # Reusable grasping & motion primitives
 │   │   ├── arm_interface.py           # Clean ROS 2 action/service client wrapper
-│   │   └── grasp_checks.py            # Slip, hold, and contact verifiers
-│   └── tasks/                         # High-level mission orchestrators
-│       ├── rail_scan_mission.py       # Pick -> Scan -> Sort puzzle mission
-│       └── bowl_transfer_mission.py   # Multi-ball bowl transfer mission
+│   │   ├── grasp_checks.py            # Slip, hold, and contact verifiers
+│   │   └── slider_checks.py           # Slide outcome monitor, release targeting
+│   ├── tasks/                         # High-level mission orchestrators
+│   │   ├── slider_mission.py          # Pick -> drop into each slider rail
+│   │   ├── rail_scan_mission.py       # Pick -> Scan -> Sort puzzle mission
+│   │   └── bowl_transfer_mission.py   # Multi-ball bowl transfer mission
+│   └── model_paths.py                 # Assembles robot + scene MJCF at launch
+├── scene_assets/                      # Meshes, textures, slider CoACD collision cache
+├── new scene/Slider_URDF&Meshes_V1.1/ # Original slider CAD export (URDF markers)
+├── tools/                             # Offline generators (scenes, robot model, collision)
+├── test/
+│   ├── unit/                          # pytest unit tests
+│   ├── probes/                        # Live-simulation diagnostics (python3 <file>)
+│   └── validation/                    # Offline MuJoCo physics/model checks
 └── docs/                              # Centralized documentation and validation notes
 ```
 
@@ -57,7 +68,7 @@ source install/setup.bash
 ```
 
 ### 2. Launch Simulation (Terminal 1)
-Launch the unified simulation stack with your desired scene (`rail_scan`, `two_bowls`, `bowl`, `table`, `empty`):
+Launch the unified simulation stack with your desired scene (`slider`, `rail_scan`, `two_bowls`, `bowl`, `table`, `empty`):
 
 ```bash
 export ROS_DOMAIN_ID=76 ROS_LOCALHOST_ONLY=1
@@ -68,8 +79,6 @@ ros2 launch rebotarm_mujoco_dm simulation.launch.py scene:=rail_scan use_moveit:
 ```bash
 export ROS_DOMAIN_ID=76 ROS_LOCALHOST_ONLY=1
 ros2 run rebotarm_mujoco_dm rail_scan_mission
-# Or legacy alias:
-ros2 run rebotarm_mujoco_dm rail_scan_cycle
 ```
 
 ---
@@ -78,6 +87,7 @@ ros2 run rebotarm_mujoco_dm rail_scan_cycle
 
 | Scene Name | Model XML | Description | Mission Node |
 | :--- | :--- | :--- | :--- |
+| `slider` | `models/scenes/dm_slider.xml` | CAD 3-rail slider on the table, catch tray, 3 golf balls ([docs](docs/slider-scene.md)) | `slider_mission` |
 | `rail_scan` | `models/scenes/dm_rail_scan.xml` | 3 inclined rails, optical scan box, 6 golf balls | `rail_scan_mission` |
 | `two_bowls` | `models/scenes/dm_two_bowls.xml` | 2 wooden bowls, 5 golf balls | `bowl_transfer_mission` |
 | `bowl` / `one_bowl` | `models/scenes/dm_bowl.xml` | 1 wooden bowl, 1 golf ball | `bowl_transfer_mission` |
@@ -125,7 +135,7 @@ source /opt/ros/humble/setup.bash
 cd /home/ahmedmahmoud/si_ware/documents/rebot_arm_b601/ws_projects
 source install/setup.bash
 export ROS_DOMAIN_ID=76 ROS_LOCALHOST_ONLY=1
-ros2 launch rebotarm_mujoco_dm mujoco_dm.launch.py scene:=empty headless:=false
+ros2 launch rebotarm_mujoco_dm simulation.launch.py scene:=empty headless:=false
 ```
 
 Wait until the terminal reports **Configured and activated** for `joint_state_broadcaster`, `rebotarm_controller`, and `gripper_controller`. In **terminal 2**, source the same overlays and set the same domain:
@@ -148,7 +158,7 @@ Expect three active controllers, seven claimed position command interfaces (`joi
 To run the motion check from **terminal 2**, while terminal 1 stays running:
 
 ```bash
-python3 src/rebotarm_ros2/src/rebotarm_mujoco_dm/tools/validate_ros.py \
+python3 src/rebotarm_ros2/src/rebotarm_mujoco_dm/test/validation/validate_ros.py \
   --report /tmp/dm-phase2-results.json
 ```
 
@@ -158,13 +168,18 @@ Share that JSON and any launch output or traceback if a check fails. Stop the si
 
 ## View the arm
 
-From the repository workspace root:
+Scene files include the arm, so view them through `prepare_scene()`, which
+writes a scene/arm pair with resolved mesh paths (the launch file does the same):
 
 ```bash
-cd /home/ahmedmahmoud/si_ware/documents/rebot_arm_b601
-~/.mujoco/mujoco-3.15.0/bin/simulate \
-  ws_projects/src/rebotarm_ros2/src/rebotarm_mujoco_dm/models/dm_scene.xml
+cd /home/ahmedmahmoud/si_ware/documents/rebot_arm_b601/ws_projects/src/rebotarm_ros2/src
+python3 -c "from rebotarm_mujoco_dm.model_paths import prepare_scene; \
+print(prepare_scene('rebotarm_mujoco_dm', 'rebotarm_bringup', '/tmp/dm_view', 'dm_table.xml'))"
+~/.mujoco/mujoco-3.15.0/bin/simulate /tmp/dm_view/dm_scene.xml
 ```
+
+Run it with `PYTHONPATH=rebotarm_mujoco_dm` if the package is not sourced. Replace
+`dm_table.xml` with any file in `models/scenes/`.
 
 The base is fixed, gravity is enabled and the initial arm pose is zero/home. The viewer's **Control** sliders set the seven actuator position targets. Arm targets are radians; `finger_left` is metres. Move targets gradually. The keyframes `home`, `ready`, `pose_a` and `pose_b` store joint positions **and** matching actuator targets for repeatable inspection. Applying a keyframe resets the state; it is not a planned trajectory.
 
@@ -176,12 +191,12 @@ Collision geoms use visualization group 3. Hide that group in the viewer to see 
 
 | File | Purpose |
 |---|---|
-| [models/dm_arm.xml](models/dm_arm.xml) | Robot bodies, meshes, joints, inertias, contact exclusions, actuators, finger equality and keyframes |
-| [models/dm_scene.xml](models/dm_scene.xml) | Scene Phase 1: table, one free sphere, floor, and robot include |
-| [models/dm_empty.xml](models/dm_empty.xml) | Original robot-only floor scene for earlier MoveIt demos and regression checks |
-| [tools/generate_model.py](tools/generate_model.py) | Regenerates the robot and empty scene; preserves an existing custom scene |
-| [tools/model_probe.cpp](tools/model_probe.cpp) | Native MuJoCo state/physics inspection and optional image rendering |
-| [tools/validate_model.py](tools/validate_model.py) | Independent URDF forward kinematics, joint/inertia checks and dynamics checks |
+| [models/robot/dm_arm.xml](models/robot/dm_arm.xml) | Robot bodies, meshes, joints, inertias, contact exclusions, actuators, finger equality and keyframes |
+| [models/scenes/dm_table.xml](models/scenes/dm_table.xml) | Table, one free sphere, floor; also the template for generated scenes |
+| [models/scenes/dm_empty.xml](models/scenes/dm_empty.xml) | Robot-only floor scene for MoveIt demos and regression checks |
+| [tools/generate_model.py](tools/generate_model.py) | Regenerates `models/robot/dm_arm.xml` and `models/scenes/dm_empty.xml` |
+| [test/validation/model_probe.cpp](test/validation/model_probe.cpp) | Native MuJoCo state/physics inspection and optional image rendering |
+| [test/validation/validate_model.py](test/validation/validate_model.py) | Independent URDF forward kinematics, joint/inertia checks and dynamics checks |
 | [3.12.0 results](docs/validation-3.12.0.md), [3.15.0 results](docs/validation-3.15.0.md) | Measured validation results |
 
 Primary source: [`../rebotarm_bringup/description/DM/urdf/ReBot_Arm_DM.urdf`](../rebotarm_bringup/description/DM/urdf/ReBot_Arm_DM.urdf) and its sibling mesh directory. The `gripper_tcp` site matches the zero-offset fixed TCP in [`rebotarm.urdf.xacro`](../rebotarm_moveit_config/config/rebotarm.urdf.xacro).
@@ -254,33 +269,34 @@ cd /home/ahmedmahmoud/si_ware/documents/rebot_arm_b601/ws_projects/src/rebotarm_
 python3 tools/generate_model.py
 
 # Test against the exact native MuJoCo version supplied with ROS Humble:
-g++ -O2 -std=c++17 tools/model_probe.cpp \
+g++ -O2 -std=c++17 test/validation/model_probe.cpp \
   -I/opt/ros/humble/opt/mujoco_vendor/include \
   -L/opt/ros/humble/opt/mujoco_vendor/lib \
   -Wl,-rpath,/opt/ros/humble/opt/mujoco_vendor/lib \
   -lmujoco -lglfw -o /tmp/dm_model_probe
 
-python3 tools/validate_model.py --probe /tmp/dm_model_probe \
+python3 test/validation/validate_model.py --probe /tmp/dm_model_probe \
   --report docs/validation-3.12.0.md
 
 # Test against the separate standalone installation:
-g++ -O2 -std=c++17 tools/model_probe.cpp \
+g++ -O2 -std=c++17 test/validation/model_probe.cpp \
   -I"$HOME/.mujoco/mujoco-3.15.0/include" \
   -L"$HOME/.mujoco/mujoco-3.15.0/lib" \
   -Wl,-rpath,"$HOME/.mujoco/mujoco-3.15.0/lib" \
   -lmujoco -lglfw -o /tmp/dm_model_probe_315
 
-python3 tools/validate_model.py --probe /tmp/dm_model_probe_315 \
+python3 test/validation/validate_model.py --probe /tmp/dm_model_probe_315 \
   --report docs/validation-3.15.0.md
 ```
 
 Both validators are headless. To inspect a particular run, or render a reference image with a display available:
 
 ```bash
-/tmp/dm_model_probe models/dm_empty.xml ready 5 open
-/tmp/dm_model_probe models/dm_empty.xml ready 5 close
-/tmp/dm_model_probe models/dm_empty.xml ready 5 release
-/tmp/dm_model_probe_315 models/dm_empty.xml pose_a 0 hold /tmp/dm_pose_a.ppm
+# First prepare /tmp/dm_view/dm_scene.xml from dm_empty.xml as in "View the arm".
+/tmp/dm_model_probe /tmp/dm_view/dm_scene.xml ready 5 open
+/tmp/dm_model_probe /tmp/dm_view/dm_scene.xml ready 5 close
+/tmp/dm_model_probe /tmp/dm_view/dm_scene.xml ready 5 release
+/tmp/dm_model_probe_315 /tmp/dm_view/dm_scene.xml pose_a 0 hold /tmp/dm_pose_a.ppm
 ```
 
 `release` disables all actuators for an unpowered gravity-fall check. It is not a control command for ordinary operation.

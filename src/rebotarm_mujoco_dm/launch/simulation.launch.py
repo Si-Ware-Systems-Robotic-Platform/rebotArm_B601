@@ -62,7 +62,6 @@ def launch_setup(context):
     scene_map = {
         "slider": "dm_slider.xml",
         "dm_slider": "dm_slider.xml",
-        "slider_no_plate": "dm_slider_no_plate.xml",
         "rail_scan": "dm_rail_scan.xml",
         "bowl": "dm_bowl.xml",
         "one_bowl": "dm_bowl.xml",
@@ -75,20 +74,9 @@ def launch_setup(context):
             f"Unknown scene '{scene_name}'. Available scenes: {list(scene_map.keys())}"
         )
 
-    # Resolve URDF path
     urdf_path = dm / "config/urdf/rebotarm_dm.urdf.xacro"
-    if not urdf_path.exists():
-        urdf_path = dm / "config/rebotarm_mujoco_dm.urdf.xacro"
-
-    # Resolve controller overrides path
     controllers_override_path = dm / "config/controllers.yaml"
-    if not controllers_override_path.exists():
-        controllers_override_path = dm / "config/controllers_sim.yaml"
-
-    # Resolve RViz config
     rviz_path = dm / "config/rviz.rviz"
-    if not rviz_path.exists():
-        rviz_path = dm / "config/moveit_mujoco.rviz"
 
     temporary = tempfile.TemporaryDirectory(prefix="rebotarm_mujoco_dm_")
     try:

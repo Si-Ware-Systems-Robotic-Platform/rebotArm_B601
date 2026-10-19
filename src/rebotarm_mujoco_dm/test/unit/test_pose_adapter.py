@@ -14,8 +14,8 @@ from moveit_msgs.msg import RobotTrajectory
 from rebotarm_msgs.action import MoveToPose
 from trajectory_msgs.msg import JointTrajectoryPoint
 
-from rebotarm_mujoco_dm.pose_adapter import PoseAdapter
-from rebotarm_mujoco_dm.pose_requests import build_plan_goal, stretch_trajectory, validate_goal
+from rebotarm_mujoco_dm.bridge.pose_adapter import PoseAdapter
+from rebotarm_mujoco_dm.bridge.pose_requests import build_plan_goal, stretch_trajectory, validate_goal
 
 
 SETTINGS = {"planning_group": "arm", "base_frame": "base_link", "tip_frame": "gripper_tcp",
@@ -200,7 +200,7 @@ class ActionOutcomeTests(unittest.TestCase):
         handle.is_cancel_requested = True
         child.cancel_goal_async.side_effect = lambda: result.set_result("stopped")
         adapter = SimpleNamespace(_child=child, settings={"cancel_timeout": 0.1}, _feedback=Mock())
-        with patch("rebotarm_mujoco_dm.pose_adapter.rclpy.ok", return_value=True):
+        with patch("rebotarm_mujoco_dm.bridge.pose_adapter.rclpy.ok", return_value=True):
             self.assertEqual(PoseAdapter._wait(adapter, result, handle, 1.0), "stopped")
         child.cancel_goal_async.assert_called_once()
 

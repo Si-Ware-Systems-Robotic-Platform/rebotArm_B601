@@ -5,6 +5,10 @@ This directory centralizes all design, physics validation, and task documentatio
 ---
 
 ## 1. Active Scenes & Tasks
+* **[`slider-scene.md`](slider-scene.md)**
+  * The CAD 3-rail slider resting on the table, catch tray, measured release and slide verification.
+* **[`cad-to-mujoco-guide.md`](cad-to-mujoco-guide.md)**
+  * Reference pipeline for bringing any SolidWorks/Inventor part into MuJoCo and MoveIt (CoACD collision, markers, generator, validation).
 * **[`rail-scan-scene.md`](file:///home/ahmedmahmoud/si_ware/documents/rebot_arm_b601/ws_projects/src/rebotarm_ros2/src/rebotarm_mujoco_dm/docs/rail-scan-scene.md)**
   * Details the 3-lane inclined sorting rails, optical scan station, and 6-ball material classification puzzle.
   * Coordinates, collision geometry, tolerances, and launch instructions.

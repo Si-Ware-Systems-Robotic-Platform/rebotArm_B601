@@ -29,6 +29,8 @@ from .scene_geometry import read_scene, relative
 from ..core.grasp_checks import hold_error, fingers_error, CENTER_TOLERANCE
 
 BALL = "loose_ball_1"
+# Ball movement (m) below which the periodic MoveIt scene update is skipped.
+SCENE_RESOLUTION = 0.001
 FINGERS = ["finger_left_link", "finger_right_link"]
 
 
@@ -107,6 +109,7 @@ class SceneBridge(Node):
         self._pending_detach = False
         self._pending_static = False
         self._static_sent = False
+        self._sent_snapshot = None
         self._history = []
         self._apply = self.create_client(ApplyPlanningScene, "/apply_planning_scene", callback_group=self._group)
         self._get = self.create_client(GetPlanningScene, "/get_planning_scene", callback_group=self._group)
@@ -321,6 +324,14 @@ class SceneBridge(Node):
             scene.object_colors.append(color)
         return scene
 
+    def _snapshot(self):
+        """What the periodic update would change: attachment and world-ball positions."""
+        balls = tuple((name, tuple(round(v / SCENE_RESOLUTION) for v in
+                                   pose_value(state.pose)[0]))
+                      for name, state in sorted(self._ball_states.items())
+                      if not (self._attached and name == self._ball_id))
+        return (self._ball_id, self._attached, balls)
+
     def _tick(self):
         with self._lock:
             if self._attached and (time.monotonic()-self._last_tcp > 1.5 or
@@ -339,6 +350,8 @@ class SceneBridge(Node):
                         self._static_sent = self._applied
                     if self._applied and self._pending_detach:
                         self._needs_detach = False
+                    if not self._applied:
+                        self._sent_snapshot = None
                     self._pending = None
                     self._pending_detach = False
                 elif time.monotonic()-self._pending_since > 2.:
@@ -351,6 +364,14 @@ class SceneBridge(Node):
                 return
             self._pending_detach = self._needs_detach and not self._attached
             self._pending_static = not self._static_sent
+            # Every planning-scene update makes RViz's MotionPlanning display redraw
+            # all scene geometry (1,081 slider pieces), freezing its window. Resend
+            # only when a ball moved or the scene still needs confirming.
+            snapshot = self._snapshot()
+            if (self._applied and not self._pending_static and not self._pending_detach
+                    and snapshot == self._sent_snapshot):
+                return
+            self._sent_snapshot = snapshot
             self._pending = self._apply.call_async(
                 ApplyPlanningScene.Request(scene=self._scene(self._pending_static)))
             self._pending_since = time.monotonic()

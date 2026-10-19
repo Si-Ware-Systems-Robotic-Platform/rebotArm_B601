@@ -144,7 +144,7 @@ class BowlTransfer(GraspTest):
         self.select_client = self.create_client(SetParametersAtomically,
                                                 "/mujoco_scene_bridge/set_parameters_atomically")
         self.enter = self.create_client(SetBool, "/mujoco_scene/enter_bowl")
-        scene = Path(get_package_share_directory("rebotarm_mujoco_dm")) / "models/dm_two_bowls.xml"
+        scene = Path(get_package_share_directory("rebotarm_mujoco_dm")) / "models/scenes/dm_two_bowls.xml"
         self.centers = bowl_centers(scene)
 
     def observe_all(self, message):

@@ -187,21 +187,21 @@ MuJoCo 3.15 gave the same final position and negligible speed. This numerical
 test demonstrates controlled settling for that initial condition; actual
 release motion and the complete ROS trial still need live validation.
 
-Repeat the native comparison after building `tools/model_probe.cpp`:
+Repeat the native comparison after building `test/validation/model_probe.cpp`:
 
 ```bash
-python3 tools/validate_bowl_physics.py --probe /tmp/dm-model-probe-3.12
+python3 test/validation/validate_bowl_physics.py --probe /tmp/dm-model-probe-3.12
 ```
 
 Reproduce from the package source directory:
 
 ```bash
-python3 tools/validate_grasp_physics.py --export-xml /tmp/dm-grasp-fixture.xml
-python3 tools/validate_grasp_physics.py --miss
-python3 tools/validate_grasp_physics.py --timestep 0.0005
-python3 tools/validate_grasp_physics.py --hold-seconds 150
+python3 test/validation/validate_grasp_physics.py --export-xml /tmp/dm-grasp-fixture.xml
+python3 test/validation/validate_grasp_physics.py --miss
+python3 test/validation/validate_grasp_physics.py --timestep 0.0005
+python3 test/validation/validate_grasp_physics.py --hold-seconds 150
 
-g++ -std=c++17 -O2 tools/grasp_probe.cpp \
+g++ -std=c++17 -O2 test/validation/grasp_probe.cpp \
   -I/opt/ros/humble/opt/mujoco_vendor/include \
   -L/opt/ros/humble/opt/mujoco_vendor/lib \
   -Wl,-rpath,/opt/ros/humble/opt/mujoco_vendor/lib \
@@ -222,7 +222,7 @@ source /opt/ros/humble/setup.bash
 cd ~/si_ware/documents/rebot_arm_b601/ws_projects
 colcon build --symlink-install --packages-select rebotarm_mujoco_dm
 source install/setup.bash
-ros2 launch rebotarm_mujoco_dm mujoco_dm.launch.py \
+ros2 launch rebotarm_mujoco_dm simulation.launch.py \
   scene:=bowl use_moveit:=true ball_visual:=mesh
 ```
 
@@ -231,7 +231,7 @@ Terminal 2 (source once in every new terminal):
 ```bash
 source /opt/ros/humble/setup.bash
 source ~/si_ware/documents/rebot_arm_b601/ws_projects/install/setup.bash
-ros2 run rebotarm_mujoco_dm grasp_test --stage close
+python3 test/probes/grasp_test.py --stage close
 ```
 
 Expected: approach, slow close, stationary measurement check, then stop. The ball
@@ -240,7 +240,7 @@ should remain between the fingers on the table. No transfer occurs.
 After restarting Terminal 1's launch:
 
 ```bash
-ros2 run rebotarm_mujoco_dm grasp_test --stage lift
+python3 test/probes/grasp_test.py --stage lift
 ```
 
 Expected: close, verify, lift 100 mm, verify the lifted object, then hold for three
@@ -249,7 +249,7 @@ simulation seconds. `grasp_test` without a stage now defaults to this lift test.
 After a successful lift check and another fresh launch:
 
 ```bash
-ros2 run rebotarm_mujoco_dm grasp_test --stage transfer
+python3 test/probes/grasp_test.py --stage transfer
 ```
 
 Expected: lift, carry above the bowl, release, retreat, and check the measured
@@ -260,7 +260,7 @@ collision checking.
 Optional deliberate miss on a fresh launch:
 
 ```bash
-ros2 run rebotarm_mujoco_dm grasp_test --miss
+python3 test/probes/grasp_test.py --miss
 ```
 
 Observe these while testing (separate terminal):

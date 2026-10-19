@@ -26,25 +26,26 @@ class ModelPathsTest(unittest.TestCase):
             root = Path(directory)
             dm = root / "dm_install/share/rebotarm_mujoco_dm"
             bringup = root / "bringup_install/share/rebotarm_bringup"
-            (dm / "models").mkdir(parents=True)
+            (dm / "models/robot").mkdir(parents=True)
+            (dm / "models/scenes").mkdir()
             (dm / "scene_assets").mkdir()
             (bringup / "description/DM/meshes/visual").mkdir(parents=True)
             arm_mesh = bringup / "description/DM/meshes/visual/arm.stl"
             table_mesh = dm / "scene_assets/table.obj"
             arm_mesh.write_text("arm fixture")
             table_mesh.write_text("table fixture")
-            (dm / "models/dm_arm.xml").write_text(
+            (dm / "models/robot/dm_arm.xml").write_text(
                 '<mujoco><compiler inertiafromgeom="false"/><asset><mesh name="arm" '
                 'file="../../rebotarm_bringup/description/DM/meshes/visual/arm.stl"/>'
                 '</asset></mujoco>')
             original = ('<mujoco><include file="dm_arm.xml"/><asset><mesh name="table" '
-                        'file="../scene_assets/table.obj"/></asset></mujoco>')
-            (dm / "models/dm_scene.xml").write_text(original)
+                        'file="../../scene_assets/table.obj"/></asset></mujoco>')
+            (dm / "models/scenes/dm_rail_scan.xml").write_text(original)
             output = root / "prepared"
             scene = prepare_scene(dm, bringup, output)
             self.assertEqual(ET.parse(scene).find("asset/mesh").get("file"), str(table_mesh))
             self.assertEqual(ET.parse(output / "dm_arm.xml").find("asset/mesh").get("file"), str(arm_mesh))
-            self.assertEqual((dm / "models/dm_scene.xml").read_text(), original)
+            self.assertEqual((dm / "models/scenes/dm_rail_scan.xml").read_text(), original)
             table_mesh.unlink()
             with self.assertRaises(FileNotFoundError):
                 prepare_scene(dm, bringup, output)

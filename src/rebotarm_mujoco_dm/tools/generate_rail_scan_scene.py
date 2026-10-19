@@ -6,7 +6,6 @@ import xml.etree.ElementTree as ET
 
 PACKAGE = Path(__file__).resolve().parents[1]
 SOURCE = Path(__file__).resolve().parents[4] / 'scene obj/folders/mycobot_pro_450_ball_sorter.xml'
-OUTPUT_MODELS = PACKAGE / 'models/dm_rail_scan.xml'
 OUTPUT_SCENES = PACKAGE / 'models/scenes/dm_rail_scan.xml'
 BALLS = (
     # (name, x, y, z)
@@ -20,7 +19,7 @@ BALLS = (
 
 
 def generate():
-    dm = ET.parse(PACKAGE / 'models/dm_table.xml')
+    dm = ET.parse(PACKAGE / 'models/scenes/dm_table.xml')
     root = dm.getroot()
     root.set('model', 'B601_DM_rail_scan')
     source = ET.parse(SOURCE).getroot()
@@ -57,7 +56,6 @@ def generate():
                     condim='6', friction='2.5 2.5 0.005 0.0005 0.0005',
                     solref='0.002 1', solimp='0.99 0.995 0.0005')
     ET.indent(dm, space='  ')
-    dm.write(OUTPUT_MODELS, encoding='utf-8', xml_declaration=True)
     dm.write(OUTPUT_SCENES, encoding='utf-8', xml_declaration=True)
     return OUTPUT_SCENES
 

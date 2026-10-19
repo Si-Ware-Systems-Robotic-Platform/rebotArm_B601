@@ -66,13 +66,13 @@ Compile the probe against the same MuJoCo library used by ROS:
 
 ```bash
 cd ~/si_ware/documents/rebot_arm_b601/ws_projects/src/rebotarm_ros2/src/rebotarm_mujoco_dm
-g++ -std=c++17 -O2 tools/model_probe.cpp \
+g++ -std=c++17 -O2 test/validation/model_probe.cpp \
   -I/opt/ros/humble/opt/mujoco_vendor/include \
   -L/opt/ros/humble/opt/mujoco_vendor/lib \
   -Wl,-rpath,/opt/ros/humble/opt/mujoco_vendor/lib \
   -lmujoco -lglfw -o /tmp/dm_ball_probe
 
-python3 tools/validate_ball_physics.py --probe /tmp/dm_ball_probe
+python3 test/validation/validate_ball_physics.py --probe /tmp/dm_ball_probe
 ```
 
 This settles the ball for two seconds, then tests a three-second interval:
@@ -92,13 +92,13 @@ the active contact dimensionality.
 Test a longer roll, a larger rolling coefficient, and timestep sensitivity:
 
 ```bash
-python3 tools/validate_ball_physics.py --probe /tmp/dm_ball_probe \
+python3 test/validation/validate_ball_physics.py --probe /tmp/dm_ball_probe \
   --case rolling --seconds 20
 
-python3 tools/validate_ball_physics.py --probe /tmp/dm_ball_probe \
+python3 test/validation/validate_ball_physics.py --probe /tmp/dm_ball_probe \
   --case rolling --rolling 0.001 --seconds 6
 
-python3 tools/validate_ball_physics.py --probe /tmp/dm_ball_probe \
+python3 test/validation/validate_ball_physics.py --probe /tmp/dm_ball_probe \
   --case rolling --timestep 0.0005
 ```
 

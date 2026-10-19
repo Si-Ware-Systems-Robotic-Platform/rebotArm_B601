@@ -27,7 +27,7 @@ source /opt/ros/humble/setup.bash
 cd /home/ahmedmahmoud/si_ware/documents/rebot_arm_b601/ws_projects
 colcon build --symlink-install --packages-up-to rebotarm_mujoco_dm
 source install/setup.bash
-ros2 launch rebotarm_mujoco_dm mujoco_dm.launch.py scene:=empty use_moveit:=true
+ros2 launch rebotarm_mujoco_dm simulation.launch.py scene:=empty use_moveit:=true
 ```
 
 The adapter starts by default when MoveIt is enabled. `use_pose_adapter:=false` disables it. It does not start in the default Phase 2 mode (`use_moveit:=false`). Wait for MoveIt and the adapter to report readiness before sending a goal. Keep the physical SDK driver stopped so one action server owns `/rebotarm/move_to_pose`.

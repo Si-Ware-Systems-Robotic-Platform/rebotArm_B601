@@ -30,15 +30,10 @@ setup(
         "console_scripts": [
             "scene_bridge = rebotarm_mujoco_dm.bridge.scene_bridge:main",
             "pose_adapter = rebotarm_mujoco_dm.bridge.pose_adapter:main",
-            "rail_scan_mission = rebotarm_mujoco_dm.tasks.rail_scan_mission:main",
-            "rail_scan_cycle = rebotarm_mujoco_dm.tasks.rail_scan_mission:main",
+            "wait_for_scene = rebotarm_mujoco_dm.bridge.wait_for_scene:main",
             "slider_mission = rebotarm_mujoco_dm.tasks.slider_mission:main",
+            "rail_scan_mission = rebotarm_mujoco_dm.tasks.rail_scan_mission:main",
             "bowl_transfer_mission = rebotarm_mujoco_dm.tasks.bowl_transfer_mission:main",
-            "bowl_transfer = rebotarm_mujoco_dm.tasks.bowl_transfer_mission:main",
-            "wait_for_scene = rebotarm_mujoco_dm.wait_for_scene:main",
-            "grasp_test = rebotarm_mujoco_dm.grasp_test:main",
-            "scene_check = rebotarm_mujoco_dm.scene_check:main",
-            "descent_probe = rebotarm_mujoco_dm.descent_probe:main",
         ]
     },
 )

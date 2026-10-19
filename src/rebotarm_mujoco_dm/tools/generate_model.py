@@ -87,7 +87,8 @@ def plate_sections(triangles, width=0.01):
 
 def generate(description, output):
     description = description.resolve()
-    output.mkdir(parents=True, exist_ok=True)
+    for folder in ("robot", "scenes"):
+        (output / folder).mkdir(parents=True, exist_ok=True)
     urdf = ET.parse(description / "urdf/ReBot_Arm_DM.urdf").getroot()
     links = {e.get("name"): e for e in urdf.findall("link")}
     joints = urdf.findall("joint")
@@ -160,7 +161,7 @@ def generate(description, output):
             name = "mesh_" + str(len(mesh_names))
             mesh_names[relative] = name
             ET.SubElement(asset, "mesh", name=name,
-                          file=os.path.relpath(description / "meshes" / relative, output.resolve()),
+                          file=os.path.relpath(description / "meshes" / relative, (output / "robot").resolve()),
                           scale=mesh.get("scale", "1 1 1"))
         return mesh_names[relative]
 
@@ -240,7 +241,7 @@ def generate(description, output):
     keyframes = ET.SubElement(robot, "keyframe")
     for name, q in POSES.items():
         ET.SubElement(keyframes, "key", name=name, qpos=numbers(q), ctrl=numbers(q[:7]))
-    write_xml(robot, output / "dm_arm.xml")
+    write_xml(robot, output / "robot/dm_arm.xml")
 
     scene = ET.Element("mujoco", model="B601_DM_scene")
     ET.SubElement(scene, "include", file="dm_arm.xml")
@@ -254,11 +255,8 @@ def generate(description, output):
     world = ET.SubElement(scene, "worldbody")
     ET.SubElement(world, "light", pos="0 -0.5 1.5", dir="0 0 -1", directional="true")
     ET.SubElement(world, "geom", name="floor", type="plane", size="1 1 0.05", pos="0 0 -0.002", material="floor_material", group="0")
-    write_xml(scene, output / "dm_empty.xml")
-    # The scene is edited independently as manipulation phases are added.
-    if not (output / "dm_scene.xml").exists():
-        write_xml(scene, output / "dm_scene.xml")
-    print(f"Generated dm_arm.xml and dm_empty.xml using {description}; existing dm_scene.xml preserved")
+    write_xml(scene, output / "scenes/dm_empty.xml")
+    print(f"Generated robot/dm_arm.xml and scenes/dm_empty.xml in {output} using {description}")
 
 
 if __name__ == "__main__":

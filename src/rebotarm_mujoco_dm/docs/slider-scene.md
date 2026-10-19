@@ -18,31 +18,24 @@ not a claim of exact surface agreement everywhere.
 
 ## Coordinates and the V1.1 export
 
-The slider is fixed at `(0.45, -0.04, 0.006451607)` in the robot base frame.
-It has a 180-degree yaw and a **1.5-degree mounting incline** raising its inlet.
-The MJCF wxyz quaternion is `(0, 0.013089596, 0, 0.999914328)`.
-A visible brown wedge, 340 x 340 mm, supports it; thickness runs from 2.0 to
-10.9 mm. The CAD mesh itself is unchanged.
+The slider is fixed at `(0.45, -0.04, 0.004451607)` in the robot base frame.
+It has a 180-degree yaw and a **1.5-degree incline** raising its inlet, and its
+low edge rests directly on the tabletop; there is no mount plate.
+The MJCF wxyz quaternion is `(0, 0.013089596, 0, 0.999914328)`. The CAD mesh
+itself is unchanged.
 
 Why the incline: the CAD inlet grooves are nearly level. At the specified drop
 markers, the faithful level collision model stalled one ball and let two roll
 back out of the entrance. The small incline preserves your local CAD markers
-while producing gravity-driven travel. It is a deliberate mounting assumption,
+while producing gravity-driven travel. It is a deliberate placement assumption,
 not a change to the CAD surface. `mount_pitch_deg` in the YAML controls it; rerun
-the generator to update the wedge, scene placement, and all world drop targets.
-Setting it to 0 retains a level 2 mm support plate, but does not guarantee rolling.
+the generator to update the scene placement and all world drop targets.
+Setting it to 0 makes the slider level, which does not guarantee rolling.
 
-`scene:=slider_no_plate` (`models/scenes/dm_slider_no_plate.xml`, parameters in
-`config/scenes/slider_no_plate_params.yaml`) omits the wedge. The slider keeps
-the same incline with its low edge resting on the table, so it sits 2 mm lower
-and every drop target is 2 mm lower. Pass `--scene slider_no_plate` to the
-mission. `tools/generate_slider_scene.py --variant {slider,slider_no_plate,all}`
-regenerates either scene.
-
-Both scenes have a blue catch tray (`slider_catch`) in front of the outlet.
-Balls leaving the slider roll towards the robot base. A ball touching the base
-puts every arm state in collision in MoveIt, which then cannot plan the next
-transfer. The tray's position and size are under `slider.catch` in the YAML.
+A blue catch tray (`slider_catch`) stands in front of the outlet. Balls leaving
+the slider roll towards the robot base. A ball touching the base puts every arm
+state in collision in MoveIt, which then cannot plan the next transfer. The
+tray's position and size are under `slider.catch` in the YAML.
 
 The exported `base_link.STL` is offset from the normalized visual mesh by
 `(+0.120000, +0.02901822685, +0.15794752160)` metres. The Ball1/2/3 exports also
@@ -52,15 +45,15 @@ collision builder checks this. The original CAD files are preserved. Do not
 import their duplicate geometry or 5.44 kg inertias as golf balls.
 
 The fixed Ball joints are ball-centre markers, transformed as:
-with the same rigid transform as the visual/collision mesh. For mount angle a:
+with the same rigid transform as the visual/collision mesh. For incline angle a:
 `world = (0.45 - cos(a)*x + sin(a)*z, -0.04 - y,
-0.006451607 + sin(a)*x + cos(a)*z)`.
+0.004451607 + sin(a)*x + cos(a)*z)`.
 
 | Marker | World X (m) | World Y (m) | World Z (m) |
 | --- | --- | --- | --- |
-| Ball1 | 0.334175705 | 0.068525867 | 0.167486237 |
-| Ball2 | 0.334175705 | -0.000518227 | 0.167486237 |
-| Ball3 | 0.334175705 | -0.069018227 | 0.167486237 |
+| Ball1 | 0.334175705 | 0.068525867 | 0.165486237 |
+| Ball2 | 0.334175705 | -0.000518227 | 0.165486237 |
+| Ball3 | 0.334175705 | -0.069018227 | 0.165486237 |
 
 Sites `slider_entry_1..3` show these locations (site group 4). Table pickup balls
 start at X=0.26, 0.20, 0.14 m, Y=**+0.18** m, Z=0.02135 m. Their physical shapes
@@ -118,6 +111,12 @@ source install/setup.bash
 ros2 launch rebotarm_mujoco_dm simulation.launch.py scene:=slider use_moveit:=true
 ```
 
+RViz starts with **MotionPlanning → Scene Geometry → Show Scene Geometry** off.
+Redrawing the slider's 1,081 collision pieces on every planning-scene update froze
+RViz. Tick it to inspect the collision shapes. The scene bridge also sends MoveIt
+an update only when a ball moves by 1 mm or more, rather than every 100 ms.
+Add `use_rviz:=false` to the launch when RViz is not needed.
+
 In terminal 2, use the same ROS domain as terminal 1:
 
 ```bash
@@ -138,23 +137,23 @@ pick/release alone is not evidence of successful slider travel.
   requires numpy, trimesh and CoACD (generated with trimesh 5.1.1 / CoACD 1.0.14). The cached result is included, so users do
   not need those decomposition dependencies to run the scene.
 - `scene_assets/slider_collision.xml`: cached convex pieces and visual SHA256.
-- `tools/generate_slider_scene.py`: embeds the cached pieces and CAD marker sites
-  into both `models/scenes/dm_slider.xml` and the legacy `models/dm_slider.xml`.
-- `config/scenes/slider_params.yaml`: release marker positions and mission timing;
-  `config/slider_params.yaml` is kept as a compatibility copy.
-- `tools/validate_slider_physics.py`: gravity-only native MuJoCo drops, with the
+- `tools/generate_slider_scene.py`: embeds the cached pieces, CAD marker sites and
+  catch tray into `models/scenes/dm_slider.xml`.
+- `config/scenes/slider_params.yaml`: release marker positions and mission timing.
+  The generator rewrites the positions; tolerances and timing you set are kept.
+- `test/validation/validate_slider_physics.py`: gravity-only native MuJoCo drops, with the
   scene contact geometry and robot model's physics settings; starts no ROS nodes.
 
-If the CAD surface changes, rebuild the collision cache, regenerate both scene
-files, and repeat validation. The generator refuses a stale collision cache when
+If the CAD surface changes, rebuild the collision cache, regenerate the scene,
+and repeat validation. The generator refuses a stale collision cache when
 the visual mesh hash changes. It also regenerates mission marker coordinates from
 the CAD joints and the configured mounting angle. Editing the generated XML alone is not persistent.
 
 ```bash
 python3 src/rebotarm_ros2/src/rebotarm_mujoco_dm/tools/build_slider_collision.py
 python3 src/rebotarm_ros2/src/rebotarm_mujoco_dm/tools/generate_slider_scene.py
-python3 src/rebotarm_ros2/src/rebotarm_mujoco_dm/tools/validate_slider_physics.py --perturbations
+python3 src/rebotarm_ros2/src/rebotarm_mujoco_dm/test/validation/validate_slider_physics.py --perturbations
 ```
 
-See `slider-validation.md` for measured offline results and the remaining ROS
-execution check.
+See [cad-to-mujoco-guide.md](cad-to-mujoco-guide.md) for the general pipeline when
+adding a new CAD part.

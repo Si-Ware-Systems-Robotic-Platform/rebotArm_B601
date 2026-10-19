@@ -12,7 +12,7 @@ import mujoco
 import numpy as np
 import yaml
 
-PACKAGE = Path(__file__).resolve().parents[1]
+PACKAGE = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(PACKAGE))
 from rebotarm_mujoco_dm.core.slider_checks import SlideMonitor
 from rebotarm_mujoco_dm.bridge.scene_geometry import read_scene, rotate
@@ -40,12 +40,11 @@ def physics_scene(scene_path):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--scene", choices=["slider", "slider_no_plate"], default="slider")
     parser.add_argument("--output", type=Path, default=Path("/tmp/slider-validation.json"))
     parser.add_argument("--perturbations", action="store_true", help="Also check releases at the mission tolerance edge in X/Y/diagonal and Z")
     args = parser.parse_args()
-    scene_path = PACKAGE / f"models/scenes/dm_{args.scene}.xml"
-    config = yaml.safe_load((PACKAGE / f"config/scenes/{args.scene}_params.yaml").read_text())["slider_mission"]["ros__parameters"]["slider"]
+    scene_path = PACKAGE / "models/scenes/dm_slider.xml"
+    config = yaml.safe_load((PACKAGE / "config/scenes/slider_params.yaml").read_text())["slider_mission"]["ros__parameters"]["slider"]
     catch = config['catch']
     qw, qx, qy, qz = config['quat']
     inverse = [-qx, -qy, -qz, qw]

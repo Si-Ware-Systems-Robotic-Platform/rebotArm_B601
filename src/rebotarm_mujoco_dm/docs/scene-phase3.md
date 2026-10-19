@@ -9,7 +9,7 @@ with the same 42.7 mm diameter and 45.9 g mass as the verified one-ball scene.
 `ball_visual:=mesh` changes their appearance only. Both bowls use the same
 existing visual mesh, wall collision pieces, bottom and friction settings.
 
-The `bowl_transfer` command reads the five measured free-joint poses. When one
+The `bowl_transfer_mission` command reads the five measured free-joint poses. When one
 bowl is empty, it selects the occupied bowl as source, uses MoveIt to approach one ball, closes the physical
 DM fingers, verifies lift and hold, carries it to a free landing location in the
 other bowl, releases it, and checks its measured resting location. It repeats
@@ -28,7 +28,7 @@ cd /home/ahmedmahmoud/si_ware/documents/rebot_arm_b601/ws_projects
 colcon build --symlink-install --packages-select rebotarm_mujoco_dm
 source install/setup.bash
 export ROS_DOMAIN_ID=76 ROS_LOCALHOST_ONLY=1
-ros2 launch rebotarm_mujoco_dm mujoco_dm.launch.py scene:=two_bowls use_moveit:=true
+ros2 launch rebotarm_mujoco_dm simulation.launch.py scene:=two_bowls use_moveit:=true
 ```
 
 In terminal 2, use the same ROS domain and source the workspace:
@@ -38,7 +38,7 @@ source /opt/ros/humble/setup.bash
 cd /home/ahmedmahmoud/si_ware/documents/rebot_arm_b601/ws_projects
 source install/setup.bash
 export ROS_DOMAIN_ID=76 ROS_LOCALHOST_ONLY=1
-ros2 run rebotarm_mujoco_dm scene_check
+python3 test/probes/scene_check.py
 ros2 control list_controllers
 ros2 topic echo /mujoco_scene/free_joint_states --once
 ros2 topic echo /mujoco_scene/ready --once
@@ -49,7 +49,7 @@ Expect three active controllers, five named `loose_ball_1` through
 the balls to settle before starting a transfer. For the first physical trial:
 
 ```bash
-ros2 run rebotarm_mujoco_dm bowl_transfer --limit 1
+ros2 run rebotarm_mujoco_dm bowl_transfer_mission --limit 1
 ```
 
 If that finishes with `PASS`, leave the simulation running. The default command
@@ -57,10 +57,10 @@ then moves the four balls still in bowl 1. Specify the source when both bowls
 contain balls, so a retry after three placements cannot accidentally reverse direction:
 
 ```bash
-ros2 run rebotarm_mujoco_dm bowl_transfer --source bowl_1
+ros2 run rebotarm_mujoco_dm bowl_transfer_mission --source bowl_1
 ```
 
-Once all five are in bowl 2, run `ros2 run rebotarm_mujoco_dm bowl_transfer`
+Once all five are in bowl 2, run `ros2 run rebotarm_mujoco_dm bowl_transfer_mission`
 to move all five back to bowl 1. On a fresh launch, this default command attempts
 all five; after a complete pass the same command automatically reverses direction.
 

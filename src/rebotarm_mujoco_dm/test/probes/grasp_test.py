@@ -11,8 +11,8 @@ from geometry_msgs.msg import PoseStamped
 from sensor_msgs.msg import JointState
 from moveit_msgs.action import ExecuteTrajectory
 from moveit_msgs.srv import GetCartesianPath
-from .pose_requests import stretch_trajectory
-from .grasp_checks import (hold_error, fingers_error, bowl_rest_error,
+from rebotarm_mujoco_dm.bridge.pose_requests import stretch_trajectory
+from rebotarm_mujoco_dm.core.grasp_checks import (hold_error, fingers_error, bowl_rest_error,
                            CLOSE_TARGET, EXPECTED_OFFSET, CENTER_TOLERANCE)
 import rclpy
 from rclpy.action import ActionClient

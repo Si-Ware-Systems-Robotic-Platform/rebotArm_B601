@@ -23,10 +23,7 @@ def load_yaml_config():
     """Load default scene parameters from config YAML if available."""
     try:
         pkg_dir = Path(get_package_share_directory("rebotarm_mujoco_dm"))
-        candidates = [
-            pkg_dir / "config/scenes/rail_scan_params.yaml",
-            pkg_dir / "config/rail_scan_params.yaml",
-        ]
+        candidates = [pkg_dir / "config/scenes/rail_scan_params.yaml"]
         for c in candidates:
             if c.exists():
                 data = yaml.safe_load(c.read_text())

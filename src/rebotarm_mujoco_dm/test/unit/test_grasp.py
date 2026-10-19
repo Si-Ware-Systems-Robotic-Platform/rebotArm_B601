@@ -10,11 +10,11 @@ from rclpy.parameter import Parameter
 from geometry_msgs.msg import PoseStamped
 from moveit_msgs.msg import (AllowedCollisionEntry, AllowedCollisionMatrix,
                              AttachedCollisionObject, CollisionObject, PlanningScene, RobotTrajectory)
-from rebotarm_mujoco_dm.grasp_checks import hold_error, fingers_error, bowl_rest_error
-from rebotarm_mujoco_dm.scene_bridge import BALL, SceneBridge
-from rebotarm_mujoco_dm.grasp_test import GraspTest, PathToleranceViolation
-from rebotarm_mujoco_dm.bowl_transfer import classify, destination_point, grasp_plan, transfer_direction
-from rebotarm_mujoco_dm.pose_adapter import PoseAdapter
+from rebotarm_mujoco_dm.core.grasp_checks import hold_error, fingers_error, bowl_rest_error
+from rebotarm_mujoco_dm.bridge.scene_bridge import BALL, SceneBridge
+from rebotarm_mujoco_dm.core.arm_interface import GraspTest, PathToleranceViolation
+from rebotarm_mujoco_dm.tasks.bowl_transfer_mission import classify, destination_point, grasp_plan, transfer_direction
+from rebotarm_mujoco_dm.bridge.pose_adapter import PoseAdapter
 
 
 def history(z=.12):
@@ -140,7 +140,7 @@ class GraspChecks(TestCase):
         self.assertEqual(bridge._ball_id,ids[1])
 
     def test_bowl_classification_uses_measured_positions(self):
-        from rebotarm_mujoco_dm.bowl_transfer import BALLS
+        from rebotarm_mujoco_dm.tasks.bowl_transfer_mission import BALLS
         centers={"bowl_1":(.3,.14),"bowl_2":(.3,-.14)}
         poses={}
         for index,name in enumerate(BALLS):
@@ -190,7 +190,7 @@ class GraspChecks(TestCase):
 
     def test_pose_adapter_stops_waiting_when_scene_faults(self):
         adapter=SimpleNamespace(_require_scene=True,_scene_ok=lambda:False)
-        with patch('rebotarm_mujoco_dm.pose_adapter.rclpy.ok',return_value=True):
+        with patch('rebotarm_mujoco_dm.bridge.pose_adapter.rclpy.ok',return_value=True):
             with self.assertRaisesRegex(RuntimeError,'stale'):
                 PoseAdapter._wait(adapter,Future(),Mock(),1.)
 

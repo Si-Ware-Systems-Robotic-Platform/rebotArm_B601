@@ -21,18 +21,13 @@ from ..core.slider_checks import SlideMonitor, release_correction, release_tcp
 from ..bridge.scene_geometry import rotate
 
 
-def load_slider_config(scene="slider"):
-    """Load the parameters generated alongside the launched slider scene."""
+def load_slider_config():
+    """Load the parameters generated alongside the slider scene."""
     try:
-        pkg_dir = Path(get_package_share_directory("rebotarm_mujoco_dm"))
-        candidates = [
-            pkg_dir / f"config/scenes/{scene}_params.yaml",
-            pkg_dir / f"config/{scene}_params.yaml",
-        ]
-        for c in candidates:
-            if c.exists():
-                data = yaml.safe_load(c.read_text())
-                return data.get("slider_mission", {}).get("ros__parameters", {})
+        path = Path(get_package_share_directory("rebotarm_mujoco_dm")) / "config/scenes/slider_params.yaml"
+        if path.exists():
+            data = yaml.safe_load(path.read_text())
+            return data.get("slider_mission", {}).get("ros__parameters", {})
     except Exception as error:
         raise RuntimeError(f"Cannot load slider configuration: {error}") from error
     raise RuntimeError("Slider configuration missing; rebuild rebotarm_mujoco_dm")
@@ -41,9 +36,9 @@ def load_slider_config(scene="slider"):
 class SliderMission(ArmInterface):
     """Picks each of the 3 balls from the table and places each at the start of its rail."""
 
-    def __init__(self, scene="slider"):
+    def __init__(self):
         super().__init__("slider_mission")
-        cfg = load_slider_config(scene)
+        cfg = load_slider_config()
 
         self.slider_pos = tuple(cfg.get("slider", {}).get("pos", [0.450, -0.040, 0.000]))
         # Configuration follows MJCF wxyz ordering; rotate() uses ROS xyzw.
@@ -342,16 +337,10 @@ def main(args=None):
         default="all",
         help="Test specific ball or all 3 balls",
     )
-    parser.add_argument(
-        "--scene",
-        choices=["slider", "slider_no_plate"],
-        default="slider",
-        help="Must match the scene:= argument given to simulation.launch.py",
-    )
     options, ros_args = parser.parse_known_args(args)
     rclpy.init(args=ros_args)
 
-    mission = SliderMission(options.scene)
+    mission = SliderMission()
     try:
         mission.clear_contact_permissions()
         if options.ball == "all":

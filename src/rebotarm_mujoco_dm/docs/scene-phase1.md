@@ -79,7 +79,7 @@ source /opt/ros/humble/setup.bash
 cd ~/si_ware/documents/rebot_arm_b601/ws_projects
 colcon build --symlink-install --packages-up-to rebotarm_mujoco_dm
 source install/setup.bash
-ros2 launch rebotarm_mujoco_dm mujoco_dm.launch.py scene:=table use_moveit:=false
+ros2 launch rebotarm_mujoco_dm simulation.launch.py scene:=table use_moveit:=false
 ```
 
 Expected: the DM arm stands near the table edge, a single white ball sits at
@@ -133,7 +133,7 @@ settling, and controller readiness, not grasping or old demo motions near object
 For the previous MoveIt demos and SDK pose action, stop the table launch and use:
 
 ```bash
-ros2 launch rebotarm_mujoco_dm mujoco_dm.launch.py scene:=empty use_moveit:=true
+ros2 launch rebotarm_mujoco_dm simulation.launch.py scene:=empty use_moveit:=true
 ```
 
 `scene:=empty` selects the preserved original floor-only environment. The new
@@ -158,9 +158,9 @@ The initial scene's ROS launch/control is user-verified; grasping and MoveIt
 scene synchronisation remain pending. Static saved poses being clear does not
 prove that paths between them are clear. Physics values still require calibration.
 
-The repeatable offline check is `tools/validate_scene.py --probe PATH_TO_MODEL_PROBE`.
-Compile `tools/model_probe.cpp` against the desired engine as in the package
+The repeatable offline check is `test/validation/validate_scene.py --probe PATH_TO_MODEL_PROBE`.
+Compile `test/validation/model_probe.cpp` against the desired engine as in the package
 README. It tests the prepared model without a ROS graph or GUI. For the original
-robot-only regression checks, `tools/validate_model.py` now uses `dm_empty.xml`.
+robot-only regression checks, `test/validation/validate_model.py` now uses `dm_empty.xml`.
 
 ![Offline scene preview, MuJoCo 3.15](scene-phase1.png)

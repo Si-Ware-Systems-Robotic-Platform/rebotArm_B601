@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """Generate the DM slider scene using cached CAD-derived convex collision parts.
 
+The slider rests directly on the table at a small incline (no mount plate).
 The normalized visual and collision meshes share the same frame. The original
 CAD export is preserved. See docs/slider-scene.md for the export-frame correction.
 Collision geoms use group 3 with visible alpha for optional inspection; sites in
 group 4 mark the three URDF ball-centre targets. No guessed channel boxes.
 """
-import argparse
 from copy import deepcopy
 from pathlib import Path
 import hashlib
@@ -15,14 +15,16 @@ import xml.etree.ElementTree as ET
 import yaml
 
 PACKAGE = Path(__file__).resolve().parents[1]
-TEMPLATE = PACKAGE / "models/dm_table.xml"
-# "slider" stands on the angled mount plate; "slider_no_plate" keeps the same incline
-# with its low edge resting directly on the table and no plate geometry.
-VARIANTS = {
-    "slider": dict(mount=True, scene="dm_slider.xml", config="slider_params.yaml"),
-    "slider_no_plate": dict(mount=False, scene="dm_slider_no_plate.xml",
-                            config="slider_no_plate_params.yaml"),
-}
+TEMPLATE = PACKAGE / "models/scenes/dm_table.xml"
+OUTPUT = PACKAGE / "models/scenes/dm_slider.xml"
+CONFIG = PACKAGE / "config/scenes/slider_params.yaml"
+# Collision bits: slider pieces use bit 2, balls bits 1+2, robot/table/tray the
+# default bit 1. Balls therefore touch the slider, while the arm's 307 collision
+# meshes are never tested against the slider's ~1,081 pieces. Those mesh-mesh
+# checks slowed the simulation enough near the release pose for ball poses to go
+# stale. MoveIt still keeps the arm clear, since it plans against the same pieces.
+SLIDER_BITS = "2"
+BALL_BITS = "3"
 CATCH_DEFAULTS = dict(x_min=0.17, x_max=0.25, y_center=-0.156, inner_width=0.10,
                       wall_height=0.03, thickness=0.01)
 
@@ -39,31 +41,24 @@ BALLS = (
 COLLISION = PACKAGE / "scene_assets/slider_collision.xml"
 
 
-def generate(variant="slider"):
-    spec = VARIANTS[variant]
-    output_scenes = PACKAGE / "models/scenes" / spec["scene"]
-    output_models = PACKAGE / "models" / spec["scene"]
-    config = PACKAGE / "config/scenes" / spec["config"]
-    # A new variant starts from the plated scene's parameters.
-    source = config if config.exists() else PACKAGE / "config/scenes/slider_params.yaml"
-    parameters = yaml.safe_load(source.read_text())
+def generate():
+    parameters = yaml.safe_load(CONFIG.read_text())
     cfg = parameters["slider_mission"]["ros__parameters"]["slider"]
     angle = math.radians(cfg.get("mount_pitch_deg", 1.5))
     if not 0 <= angle <= math.radians(10):
         raise ValueError("Mount inclination must be between 0 and 10 degrees")
     sn, cs = math.sin(angle), math.cos(angle)
-    length, width, minimum = 0.170, 0.170, 0.002
-    height = minimum + math.tan(angle) * length
+    # Origin height that puts the inclined base's low edge (0.170 m from the
+    # origin) on the tabletop.
+    base_z = math.tan(angle) * 0.170
     px, py = cfg["pos"][:2]
-    # Without the plate the slider's low edge rests on the table itself.
-    base_z = height if spec["mount"] else height - minimum
     cfg["mount_pitch_deg"] = round(math.degrees(angle), 6)
     cfg["pos"] = [px, py, base_z]
     # Rz(pi) * Ry(-angle): the inlet (+local X) is raised slightly.
     cfg["quat"] = [0., math.sin(angle/2), 0., math.cos(angle/2)]
     tree = ET.parse(TEMPLATE)
     root = tree.getroot()
-    root.set("model", "B601_DM_" + variant)
+    root.set("model", "B601_DM_slider")
     
     asset = root.find("asset")
     world = root.find("worldbody")
@@ -83,21 +78,6 @@ def generate(variant="slider"):
     # Create slider body
     slider = ET.Element("body", name="slider", pos=" ".join(map(str, cfg["pos"])),
                         quat=" ".join(map(str, cfg["quat"])))
-
-    if spec["mount"]:
-        # A visible, collidable wedge accounts for the inclination physically.
-        # Its top plane coincides with the normalized slider's local Z=0 plane.
-        vertices = [(-length,-width,0), (length,-width,0), (length,width,0), (-length,width,0),
-                    (-length,-width,minimum), (length,-width,2*height-minimum),
-                    (length,width,2*height-minimum), (-length,width,minimum)]
-        faces = [(0,2,1),(0,3,2),(4,5,6),(4,6,7),(0,1,5),(0,5,4),
-                 (1,2,6),(1,6,5),(2,3,7),(2,7,6),(3,0,4),(3,4,7)]
-        ET.SubElement(asset, "mesh", name="slider_mount_mesh",
-                      vertex=" ".join(str(v) for point in vertices for v in point),
-                      face=" ".join(str(v) for face in faces for v in face))
-        mount = ET.SubElement(world, "body", name="slider_mount", pos=f"{px} {py} 0", quat="0 0 0 1")
-        ET.SubElement(mount, "geom", name="slider_mount", type="mesh", mesh="slider_mount_mesh",
-                      rgba="0.55 0.32 0.13 1", group="0", friction="0.5 0.001 0.0001")
 
     # Finished balls leave the outlet towards the robot base. Left on the table, a ball
     # reaches the base and MoveIt then rejects every arm state, so catch them here.
@@ -125,7 +105,10 @@ def generate(variant="slider"):
     for mesh in collision.findall("asset/mesh"):
         asset.append(deepcopy(mesh))
     for geom in collision.findall("body/geom"):
-        slider.append(deepcopy(geom))
+        geom = deepcopy(geom)
+        geom.set("contype", SLIDER_BITS)
+        geom.set("conaffinity", SLIDER_BITS)
+        slider.append(geom)
     # URDF Ball joints are markers, not physical golf-ball meshes/inertias.
     urdf = ET.parse(PACKAGE / "new scene/Slider_URDF&Meshes_V1.1/urdf/Slider_URDF&Meshes_V1.1.urdf")
     for index in (1, 2, 3):
@@ -146,7 +129,7 @@ def generate(variant="slider"):
         b_body.append(deepcopy(ball_inertial))
         ET.SubElement(b_body, "geom", name=f"{name}_geom", type="sphere",
                       size="0.02135", mass="0.0459", material="ball_material",
-                      contype="1", conaffinity="1", condim="6",
+                      contype=BALL_BITS, conaffinity=BALL_BITS, condim="6",
                       friction="0.6 0.0005 0.0001", solref="0.006 0.6")
         world.append(b_body)
         
@@ -162,21 +145,11 @@ def generate(variant="slider"):
                               solref="0.002 1", solimp="0.99 0.995 0.0005")
     
     ET.indent(tree, space="  ")
-    output_scenes.parent.mkdir(parents=True, exist_ok=True)
-    tree.write(output_scenes, encoding="utf-8", xml_declaration=True)
-    output_models.parent.mkdir(parents=True, exist_ok=True)
-    tree.write(output_models, encoding="utf-8", xml_declaration=True)
-    configs = [config]
-    if variant == "slider":
-        configs.append(PACKAGE / "config/slider_params.yaml")
-    for path in configs:
-        path.write_text(yaml.safe_dump(parameters, sort_keys=False))
-    print(f"Generated {output_scenes}, {output_models} and {config}")
+    OUTPUT.parent.mkdir(parents=True, exist_ok=True)
+    tree.write(OUTPUT, encoding="utf-8", xml_declaration=True)
+    CONFIG.write_text(yaml.safe_dump(parameters, sort_keys=False))
+    print(f"Generated {OUTPUT} and {CONFIG}")
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--variant", choices=[*VARIANTS, "all"], default="all")
-    variant = parser.parse_args().variant
-    for name in VARIANTS if variant == "all" else [variant]:
-        generate(name)
+    generate()

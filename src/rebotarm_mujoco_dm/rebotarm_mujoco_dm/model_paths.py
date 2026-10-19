@@ -35,10 +35,7 @@ def prepare_scene(dm_share, bringup_share, output, scene_file="dm_rail_scan.xml"
     meshes = Path(bringup_share) / "description/DM/meshes"
     dm_share = Path(dm_share)
 
-    # Resolve robot model (check models/robot/ first, fallback to models/)
     robot_path = dm_share / "models/robot/dm_arm.xml"
-    if not robot_path.exists():
-        robot_path = dm_share / "models/dm_arm.xml"
     model = ET.parse(robot_path.resolve(strict=True))
     model.getroot().find("compiler").attrib.pop("meshdir", None)
     for mesh in model.findall("asset/mesh"):
@@ -47,15 +44,12 @@ def prepare_scene(dm_share, bringup_share, output, scene_file="dm_rail_scan.xml"
             path = (meshes / relative).resolve(strict=True)
             mesh.set("file", str(path))
 
-    # Resolve scene model (check models/scenes/, then models/)
+    # Scene models live in models/scenes/; an explicit path is also accepted.
     scene_path = None
     candidates = [
         dm_share / "models/scenes" / scene_file,
-        dm_share / "models" / scene_file,
         Path(scene_file),
     ]
-    if scene_file == "dm_rail_scan.xml":
-        candidates.append(dm_share / "models/dm_scene.xml")
     for candidate in candidates:
         if candidate.exists():
             scene_path = candidate.resolve(strict=True)

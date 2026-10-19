@@ -19,7 +19,7 @@ source /opt/ros/humble/setup.bash
 cd /home/ahmedmahmoud/si_ware/documents/rebot_arm_b601/ws_projects
 colcon build --symlink-install --packages-up-to rebotarm_mujoco_dm
 source install/setup.bash
-ros2 launch rebotarm_mujoco_dm mujoco_dm.launch.py scene:=empty use_moveit:=true
+ros2 launch rebotarm_mujoco_dm simulation.launch.py scene:=empty use_moveit:=true
 ```
 
 Expected: MuJoCo opens, the three controllers activate, then `move_group` and RViz start. RViz opens with MotionPlanning enabled, group `arm`, fixed frame `world`, and velocity/acceleration scaling 0.2. Wait until the robot is visible and MoveIt is ready to plan. If startup fails, report the first error and surrounding lines before attempting motion.
@@ -28,10 +28,10 @@ Launch options:
 
 ```bash
 # Existing Phase 2 operation (default):
-ros2 launch rebotarm_mujoco_dm mujoco_dm.launch.py
+ros2 launch rebotarm_mujoco_dm simulation.launch.py
 
 # MoveIt without either viewer, for later terminal-only use:
-ros2 launch rebotarm_mujoco_dm mujoco_dm.launch.py scene:=empty use_moveit:=true use_rviz:=false headless:=true
+ros2 launch rebotarm_mujoco_dm simulation.launch.py scene:=empty use_moveit:=true use_rviz:=false headless:=true
 ```
 
 These are alternatives, not additional launches to run together.

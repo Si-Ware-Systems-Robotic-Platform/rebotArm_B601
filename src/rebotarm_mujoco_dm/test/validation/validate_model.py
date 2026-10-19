@@ -8,12 +8,14 @@ from datetime import date
 import json
 from pathlib import Path
 import subprocess
+import sys
+import tempfile
 import xml.etree.ElementTree as ET
 
 import numpy as np
 from scipy.spatial.transform import Rotation
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 
 def vector(text):
@@ -68,8 +70,12 @@ def main(args):
         check(np.all(vector(origin.get("xyz", "0 0 0")) == 0) and
               np.all(vector(origin.get("rpy", "0 0 0")) == 0), "MoveIt TCP offset changed")
     # Robot-only regression tests deliberately omit dynamic scene objects.
-    scene = ROOT / "models/dm_empty.xml"
-    model = ET.parse(ROOT / "models/dm_arm.xml").getroot()
+    # prepare_scene() writes dm_empty.xml beside the dm_arm.xml it includes.
+    sys.path.insert(0, str(ROOT))
+    from rebotarm_mujoco_dm.model_paths import prepare_scene
+    workdir = tempfile.TemporaryDirectory(prefix="dm_model_validation_")
+    scene = prepare_scene(ROOT, ROOT.parent / "rebotarm_bringup", workdir.name, "dm_empty.xml")
+    model = ET.parse(ROOT / "models/robot/dm_arm.xml").getroot()
     keys = {k.get("name"): vector(k.get("qpos")) for k in model.findall("keyframe/key")}
     results = []
 

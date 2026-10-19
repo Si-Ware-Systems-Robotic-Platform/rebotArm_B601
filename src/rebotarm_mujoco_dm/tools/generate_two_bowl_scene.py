@@ -6,8 +6,8 @@ import math
 import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[1]
-SOURCE = ROOT / "models/dm_scene.xml"
-OUTPUT = ROOT / "models/dm_two_bowls.xml"
+SOURCE = ROOT / "models/scenes/dm_bowl.xml"
+OUTPUT = ROOT / "models/scenes/dm_two_bowls.xml"
 BALL_COUNT = 5
 BOWL_CENTERS = ((.30, .14), (.30, -.14))
 
