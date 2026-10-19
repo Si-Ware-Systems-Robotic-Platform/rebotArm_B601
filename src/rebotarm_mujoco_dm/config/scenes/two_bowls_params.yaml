@@ -1,0 +1,25 @@
+two_bowls:
+  ros__parameters:
+    bowls:
+      source_bowl:
+        name: bowl_1
+        center: [0.35, -0.15, 0.0]
+      target_bowl:
+        name: bowl_2
+        center: [0.35, 0.15, 0.0]
+    balls:
+      - loose_ball_1
+      - loose_ball_2
+      - loose_ball_3
+      - loose_ball_4
+      - loose_ball_5
+    motion:
+      approach_z: 0.130
+      pick_z: 0.011
+      lift_z: 0.111
+      release_z: 0.080
+      transfer_speed: 0.03
+    tolerances:
+      center_tolerance: 0.012
+      close_target: 0.015
+      hold_timeout: 1.5

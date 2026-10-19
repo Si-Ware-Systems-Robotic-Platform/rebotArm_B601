@@ -17,6 +17,7 @@ from rclpy.qos import qos_profile_sensor_data
 from rclpy.time import Time
 from rebotarm_msgs.action import MoveToPose
 from sensor_msgs.msg import JointState
+from std_msgs.msg import Bool
 from tf2_ros import Buffer, TransformException, TransformListener
 
 from .pose_requests import build_plan_goal, pose_matches, stretch_trajectory, validate_goal
@@ -28,7 +29,8 @@ class PoseAdapter(Node):
         defaults = {
             "planning_group": "arm", "base_frame": "base_link", "tip_frame": "gripper_tcp",
             "planning_time": 5.0, "position_tolerance": 0.005, "orientation_tolerance": 0.05,
-            "velocity_scaling": 0.2, "acceleration_scaling": 0.2,
+            "wrist_roll_tolerance": 0.05,
+            "velocity_scaling": 0.5, "acceleration_scaling": 0.5,
             "result_timeout": 180.0, "response_timeout": 10.0, "cancel_timeout": 5.0,
         }
         self.settings = {name: self.declare_parameter(name, default).value
@@ -38,6 +40,10 @@ class PoseAdapter(Node):
                 raise ValueError(f"{name} must be finite and positive")
         if any(self.settings[name] > 1 for name in ("velocity_scaling", "acceleration_scaling")):
             raise ValueError("Velocity and acceleration scaling must be in (0, 1]")
+        self._require_scene = self.declare_parameter("require_scene_ready", False).value
+        self._scene_ready = False
+        self._scene_received = 0.
+        self.create_subscription(Bool, "/mujoco_scene/ready", self._scene_status, 10)
         self._lock = threading.Lock()
         self._busy = False
         self._blocked = False
@@ -65,6 +71,14 @@ class PoseAdapter(Node):
             f"{self.settings['base_frame']}; waiting for MoveIt servers before accepting goals. "
             "duration is a minimum trajectory time; MoveIt limits may require longer.")
 
+    def _scene_status(self, message):
+        self._scene_ready = message.data
+        self._scene_received = time.monotonic()
+
+    def _scene_ok(self):
+        return not self._require_scene or (
+            self._scene_ready and time.monotonic()-self._scene_received < 1.)
+
     def _accept_goal(self, goal):
         try:
             validate_goal(goal)
@@ -72,6 +86,9 @@ class PoseAdapter(Node):
             self.get_logger().warning(str(error))
             return GoalResponse.REJECT
         with self._lock:
+            if not self._scene_ok():
+                self.get_logger().warning("Rejecting pose goal: measured planning scene is not ready")
+                return GoalResponse.REJECT
             if self._busy or self._blocked:
                 self.get_logger().warning("Rejecting pose goal: adapter busy or awaiting restart after a backend timeout")
                 return GoalResponse.REJECT
@@ -118,6 +135,8 @@ class PoseAdapter(Node):
         deadline = time.monotonic() + timeout
         cancel_sent = False
         while rclpy.ok() and not future.done():
+            if getattr(self, "_require_scene", False) and not self._scene_ok():
+                raise RuntimeError("Scene state became stale or unavailable; stopping pose goal")
             if handle.is_cancel_requested and self._child is not None and not cancel_sent:
                 self._child.cancel_goal_async()
                 cancel_sent = True
@@ -133,6 +152,8 @@ class PoseAdapter(Node):
     def _run_child(self, client, request, handle):
         if handle.is_cancel_requested:
             return None
+        if getattr(self, "_require_scene", False) and not self._scene_ok():
+            raise RuntimeError("Scene state is not ready")
         if not client.server_is_ready():
             raise RuntimeError("MoveIt action server disappeared")
         sent = client.send_goal_async(request)
@@ -200,7 +221,10 @@ class PoseAdapter(Node):
                 if not plan.result.planned_trajectory.joint_trajectory.points:
                     pose = self._pose()
                     if not pose_matches(pose, handle.request.target_pose,
-                                        self.settings["position_tolerance"], self.settings["orientation_tolerance"]):
+                                        self.settings["position_tolerance"],
+                                        max(self.settings["orientation_tolerance"],
+                                            self.settings.get("wrist_roll_tolerance", 0.05)),
+                                        wrist_free=self.settings.get("wrist_roll_tolerance", 0.05) > 1.0):
                         raise RuntimeError("MoveIt returned no trajectory and measured TCP is outside the pose tolerance")
                     result.final_pose = pose
                     result.success = True

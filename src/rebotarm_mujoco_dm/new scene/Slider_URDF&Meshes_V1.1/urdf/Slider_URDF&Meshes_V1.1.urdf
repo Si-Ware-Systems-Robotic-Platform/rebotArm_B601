@@ -1,0 +1,206 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- This URDF was automatically created by SolidWorks to URDF Exporter! Originally created by Stephen Brawner (brawner@gmail.com) 
+     Commit Version: 1.6.0-4-g7f85cfe  Build Version: 1.6.7995.38578
+     For more information, please see http://wiki.ros.org/sw_urdf_exporter -->
+<robot
+  name="Slider_URDF&amp;Meshes_V1.1">
+  <link
+    name="base_link">
+    <inertial>
+      <origin
+        xyz="-0.0149334613699201 0.0247643527900253 0.0720802425608906"
+        rpy="0 0 0" />
+      <mass
+        value="5.44194850182946" />
+      <inertia
+        ixx="0.0392271420379846"
+        ixy="-0.00157335116290989"
+        ixz="-0.00471385970435551"
+        iyy="0.0458735602124632"
+        iyz="0.00940658523335364"
+        izz="0.0684487095616402" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://Slider_URDF&amp;Meshes_V1.1/meshes/base_link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.270588235294118 0.270588235294118 0.270588235294118 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://Slider_URDF&amp;Meshes_V1.1/meshes/base_link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <link
+    name="Ball1">
+    <inertial>
+      <origin
+        xyz="-0.13493346136992 0.133290219829666 -0.0858672790374191"
+        rpy="0 0 0" />
+      <mass
+        value="5.44194850182946" />
+      <inertia
+        ixx="0.0392271420379846"
+        ixy="-0.00157335116290989"
+        ixz="-0.00471385970435551"
+        iyy="0.0458735602124632"
+        iyz="0.00940658523335364"
+        izz="0.0684487095616402" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://Slider_URDF&amp;Meshes_V1.1/meshes/Ball1.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.270588235294118 0.270588235294118 0.270588235294118 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://Slider_URDF&amp;Meshes_V1.1/meshes/Ball1.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="Ball1"
+    type="fixed">
+    <origin
+      xyz="0.12 -0.108525867039641 0.15794752159831"
+      rpy="0 0 0" />
+    <parent
+      link="base_link" />
+    <child
+      link="Ball1" />
+    <axis
+      xyz="0 0 0" />
+  </joint>
+  <link
+    name="Ball2">
+    <inertial>
+      <origin
+        xyz="-0.13493346136992 0.0642461259443498 -0.0858672790374191"
+        rpy="0 0 0" />
+      <mass
+        value="5.44194850182946" />
+      <inertia
+        ixx="0.0392271420379846"
+        ixy="-0.00157335116290989"
+        ixz="-0.00471385970435551"
+        iyy="0.0458735602124632"
+        iyz="0.00940658523335364"
+        izz="0.0684487095616402" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://Slider_URDF&amp;Meshes_V1.1/meshes/Ball2.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.270588235294118 0.270588235294118 0.270588235294118 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://Slider_URDF&amp;Meshes_V1.1/meshes/Ball2.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="Ball2"
+    type="fixed">
+    <origin
+      xyz="0.12 -0.0394817731543244 0.15794752159831"
+      rpy="0 0 0" />
+    <parent
+      link="base_link" />
+    <child
+      link="Ball2" />
+    <axis
+      xyz="0 0 0" />
+  </joint>
+  <link
+    name="Ball3">
+    <inertial>
+      <origin
+        xyz="-0.13493346136992 -0.00425387405565025 -0.0858672790374191"
+        rpy="0 0 0" />
+      <mass
+        value="5.44194850182946" />
+      <inertia
+        ixx="0.0392271420379846"
+        ixy="-0.00157335116290989"
+        ixz="-0.00471385970435551"
+        iyy="0.0458735602124632"
+        iyz="0.00940658523335364"
+        izz="0.0684487095616402" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://Slider_URDF&amp;Meshes_V1.1/meshes/Ball3.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.270588235294118 0.270588235294118 0.270588235294118 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://Slider_URDF&amp;Meshes_V1.1/meshes/Ball3.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="Ball3"
+    type="fixed">
+    <origin
+      xyz="0.12 0.0290182268456756 0.15794752159831"
+      rpy="0 0 0" />
+    <parent
+      link="base_link" />
+    <child
+      link="Ball3" />
+    <axis
+      xyz="0 0 0" />
+  </joint>
+</robot>

@@ -67,7 +67,8 @@ def main(args):
     if origin is not None:
         check(np.all(vector(origin.get("xyz", "0 0 0")) == 0) and
               np.all(vector(origin.get("rpy", "0 0 0")) == 0), "MoveIt TCP offset changed")
-    scene = ROOT / "models/dm_scene.xml"
+    # Robot-only regression tests deliberately omit dynamic scene objects.
+    scene = ROOT / "models/dm_empty.xml"
     model = ET.parse(ROOT / "models/dm_arm.xml").getroot()
     keys = {k.get("name"): vector(k.get("qpos")) for k in model.findall("keyframe/key")}
     results = []

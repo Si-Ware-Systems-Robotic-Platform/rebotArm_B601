@@ -50,7 +50,7 @@ def build_plan_goal(goal, settings):
     orientation.parameterization = OrientationConstraint.ROTATION_VECTOR
     orientation.absolute_x_axis_tolerance = settings["orientation_tolerance"]
     orientation.absolute_y_axis_tolerance = settings["orientation_tolerance"]
-    orientation.absolute_z_axis_tolerance = settings["orientation_tolerance"]
+    orientation.absolute_z_axis_tolerance = settings.get("wrist_roll_tolerance", settings["orientation_tolerance"])
     orientation.weight = 1.0
     request.request.goal_constraints = [Constraints(
         position_constraints=[position], orientation_constraints=[orientation])]
@@ -60,21 +60,30 @@ def build_plan_goal(goal, settings):
     return request
 
 
-def pose_matches(measured, target, position_tolerance, orientation_tolerance):
+def pose_matches(measured, target, position_tolerance, orientation_tolerance, wrist_free=False):
     """Conservative check for an already-satisfied pose when MoveIt returns no path."""
     if measured is None:
         return False
     distance = math.hypot(measured.position.x - target.position.x,
                           measured.position.y - target.position.y,
                           measured.position.z - target.position.z)
+    if distance > position_tolerance:
+        return False
     a, b = measured.orientation, target.orientation
     a_values, b_values = (a.x, a.y, a.z, a.w), (b.x, b.y, b.z, b.w)
     a_norm, b_norm = math.hypot(*a_values), math.hypot(*b_values)
     if a_norm < 1e-9 or b_norm < 1e-9:
         return False
+    if wrist_free:
+        ax, ay, az, aw = [v / a_norm for v in a_values]
+        bx, by, bz, bw = [v / b_norm for v in b_values]
+        za = (2*(ax*az + aw*ay), 2*(ay*az - aw*ax), 1 - 2*(ax*ax + ay*ay))
+        zb = (2*(bx*bz + bw*by), 2*(by*bz - bw*bx), 1 - 2*(bx*bx + by*by))
+        dot_z = sum(u*v for u, v in zip(za, zb))
+        return dot_z >= math.cos(orientation_tolerance)
     dot = abs(sum((x / a_norm) * (y / b_norm) for x, y in zip(a_values, b_values)))
     angle = 2 * math.acos(min(1.0, dot))
-    return distance <= position_tolerance and angle <= orientation_tolerance
+    return angle <= orientation_tolerance
 
 
 def stretch_trajectory(trajectory, minimum_seconds):

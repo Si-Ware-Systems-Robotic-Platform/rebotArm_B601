@@ -17,4 +17,4 @@ gripper_controller:
     constraints:
       stopped_velocity_tolerance: 0.01
       goal_time: 2.0
-      finger_left: {trajectory: 0.01, goal: 0.001}
+      finger_left: {trajectory: 0.01, goal: 0.002}

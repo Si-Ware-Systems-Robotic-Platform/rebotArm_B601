@@ -1,0 +1,17 @@
+<?xml version='1.0' encoding='utf-8'?>
+<mujoco model="B601_DM_scene">
+  <include file="dm_arm.xml" />
+  <statistic center="0.12 0 0.2" extent="0.75" />
+  <visual>
+    <headlight diffuse="0.7 0.7 0.7" ambient="0.3 0.3 0.3" specular="0.1 0.1 0.1" />
+    <global azimuth="135" elevation="-25" />
+  </visual>
+  <asset>
+    <texture name="floor_texture" type="2d" builtin="checker" rgb1="0.22 0.26 0.3" rgb2="0.12 0.15 0.18" width="256" height="256" />
+    <material name="floor_material" texture="floor_texture" texrepeat="8 8" texuniform="true" />
+  </asset>
+  <worldbody>
+    <light pos="0 -0.5 1.5" dir="0 0 -1" directional="true" />
+    <geom name="floor" type="plane" size="1 1 0.05" pos="0 0 -0.002" material="floor_material" group="0" />
+  </worldbody>
+</mujoco>

@@ -1,18 +1,92 @@
-# B601-DM MuJoCo simulation
+# B601-DM MuJoCo Simulation
 
-The DM physics model is implemented and validated with native MuJoCo **3.12.0** (the ROS vendor library) and **3.15.0** (the standalone installation).
+Modular ROS 2 Humble simulation package for the reBotArm B601-DM robot arm featuring MuJoCo physics, `ros2_control`, MoveIt 2 motion planning, and high-level mission tasks.
 
-Phase 2 passed on user-supplied terminal results: package build, MuJoCo controller startup, arm and gripper trajectory actions, seven claimed command interfaces, 16 state interfaces, three active controllers, one `/joint_states` publisher, and advancing `/clock`. The gripper opened to about `finger_left = +0.02 m`, `finger_right = -0.02 m` and then closed near zero. Phase 3 joint-goal execution and Phase 4 MoveIt demos are user-verified; Phase 3 RViz pose/home checks remain open. See the [validation plan and recorded results](../../../../../documents/plan%20for%20mujoco.md).
+---
 
-## Phase 3: MoveIt and RViz
+## Architecture Overview
 
-The MoveIt launch integration has passed static checks and user runtime checks for startup and joint-goal execution. The user also confirmed a terminal end-effector pose goal worked; the separate RViz pose and named-home checks remain open. Follow [Phase 3 validation](docs/phase3-validation.md) for the complete commands and expected results.
+```text
+rebotarm_mujoco_dm/
+├── config/
+│   ├── controllers.yaml               # ros2_control hardware interface overrides
+│   ├── rviz.rviz                      # RViz display configuration
+│   ├── scenes/                        # Scene-specific task parameters
+│   │   ├── rail_scan_params.yaml      # Coordinates, dwell times, puzzle map
+│   │   ├── bowl_params.yaml           # Single bowl transfer parameters
+│   │   └── two_bowls_params.yaml      # Two-bowl batch parameters
+│   └── urdf/                          # Robot URDF & ros2_control descriptions
+│       ├── rebotarm_dm.urdf.xacro
+│       └── rebotarm_dm.ros2_control.xacro
+├── launch/
+│   └── simulation.launch.py           # Unified launch file (scene:=...)
+├── models/
+│   ├── robot/                         # Pure arm MJCF definition
+│   │   └── dm_arm.xml
+│   └── scenes/                        # Environment & task MJCF models
+│       ├── dm_rail_scan.xml           # 3 sorting rails, optical scan station, 6 balls
+│       ├── dm_two_bowls.xml           # 2 wooden bowls, 5 balls
+│       ├── dm_bowl.xml                # 1 wooden bowl, 1 ball
+│       ├── dm_table.xml               # Wood table, 1 ball
+│       └── dm_empty.xml               # Clean robot-only scene
+├── rebotarm_mujoco_dm/
+│   ├── bridge/                        # MoveIt & scene perception bridge
+│   │   ├── scene_bridge.py            # Free joint / collision object publisher
+│   │   ├── scene_geometry.py          # Collision shape extractors
+│   │   ├── pose_adapter.py            # Action server bridging MoveToPose
+│   │   └── pose_requests.py           # Trajectory request builders
+│   ├── core/                          # Reusable grasping & motion primitives
+│   │   ├── arm_interface.py           # Clean ROS 2 action/service client wrapper
+│   │   └── grasp_checks.py            # Slip, hold, and contact verifiers
+│   └── tasks/                         # High-level mission orchestrators
+│       ├── rail_scan_mission.py       # Pick -> Scan -> Sort puzzle mission
+│       └── bowl_transfer_mission.py   # Multi-ball bowl transfer mission
+└── docs/                              # Centralized documentation and validation notes
+```
 
-After building and sourcing the package, start the combined stack with:
+---
+
+## Quick Start: Unified Launch & Missions
+
+### 1. Build the Workspace
+```bash
+cd ~/si_ware/documents/rebot_arm_b601/ws_projects
+source /opt/ros/humble/setup.bash
+colcon build --symlink-install --packages-select rebotarm_mujoco_dm
+source install/setup.bash
+```
+
+### 2. Launch Simulation (Terminal 1)
+Launch the unified simulation stack with your desired scene (`rail_scan`, `two_bowls`, `bowl`, `table`, `empty`):
 
 ```bash
-ros2 launch rebotarm_mujoco_dm mujoco_dm.launch.py use_moveit:=true
+export ROS_DOMAIN_ID=76 ROS_LOCALHOST_ONLY=1
+ros2 launch rebotarm_mujoco_dm simulation.launch.py scene:=rail_scan use_moveit:=true
 ```
+
+### 3. Run Mission Task (Terminal 2)
+```bash
+export ROS_DOMAIN_ID=76 ROS_LOCALHOST_ONLY=1
+ros2 run rebotarm_mujoco_dm rail_scan_mission
+# Or legacy alias:
+ros2 run rebotarm_mujoco_dm rail_scan_cycle
+```
+
+---
+
+## Supported Scenes
+
+| Scene Name | Model XML | Description | Mission Node |
+| :--- | :--- | :--- | :--- |
+| `rail_scan` | `models/scenes/dm_rail_scan.xml` | 3 inclined rails, optical scan box, 6 golf balls | `rail_scan_mission` |
+| `two_bowls` | `models/scenes/dm_two_bowls.xml` | 2 wooden bowls, 5 golf balls | `bowl_transfer_mission` |
+| `bowl` / `one_bowl` | `models/scenes/dm_bowl.xml` | 1 wooden bowl, 1 golf ball | `bowl_transfer_mission` |
+| `table` | `models/scenes/dm_table.xml` | Wooden table, 1 golf ball | Manual / SDK tests |
+| `empty` | `models/scenes/dm_empty.xml` | Tabletop arm only | Pure motion tests |
+
+---
+
+## Phase 3: MoveIt and RViz
 
 Stop the previous simulation launch before using this command. It starts one MuJoCo controller manager and then MoveIt/RViz after controller activation. `use_rviz:=false` omits RViz; `headless:=true` omits the MuJoCo viewer. With `use_moveit:=false` (the default), the launch retains the Phase 2 controller-only mode.
 
@@ -51,7 +125,7 @@ source /opt/ros/humble/setup.bash
 cd /home/ahmedmahmoud/si_ware/documents/rebot_arm_b601/ws_projects
 source install/setup.bash
 export ROS_DOMAIN_ID=76 ROS_LOCALHOST_ONLY=1
-ros2 launch rebotarm_mujoco_dm mujoco_dm.launch.py headless:=false
+ros2 launch rebotarm_mujoco_dm mujoco_dm.launch.py scene:=empty headless:=false
 ```
 
 Wait until the terminal reports **Configured and activated** for `joint_state_broadcaster`, `rebotarm_controller`, and `gripper_controller`. In **terminal 2**, source the same overlays and set the same domain:
@@ -103,8 +177,9 @@ Collision geoms use visualization group 3. Hide that group in the viewer to see 
 | File | Purpose |
 |---|---|
 | [models/dm_arm.xml](models/dm_arm.xml) | Robot bodies, meshes, joints, inertias, contact exclusions, actuators, finger equality and keyframes |
-| [models/dm_scene.xml](models/dm_scene.xml) | Robot include, floor, gravity/solver settings inherited from robot, lighting and camera |
-| [tools/generate_model.py](tools/generate_model.py) | Reproducible conversion of this DM description into the two MJCF files |
+| [models/dm_scene.xml](models/dm_scene.xml) | Scene Phase 1: table, one free sphere, floor, and robot include |
+| [models/dm_empty.xml](models/dm_empty.xml) | Original robot-only floor scene for earlier MoveIt demos and regression checks |
+| [tools/generate_model.py](tools/generate_model.py) | Regenerates the robot and empty scene; preserves an existing custom scene |
 | [tools/model_probe.cpp](tools/model_probe.cpp) | Native MuJoCo state/physics inspection and optional image rendering |
 | [tools/validate_model.py](tools/validate_model.py) | Independent URDF forward kinematics, joint/inertia checks and dynamics checks |
 | [3.12.0 results](docs/validation-3.12.0.md), [3.15.0 results](docs/validation-3.15.0.md) | Measured validation results |
@@ -113,7 +188,7 @@ Primary source: [`../rebotarm_bringup/description/DM/urdf/ReBot_Arm_DM.urdf`](..
 
 The source URDF and all existing bringup, MoveIt, RS and hardware files remain unchanged. Visual meshes are referenced directly; generated collision vertices derive from the same DM meshes. `rebotarm_bringup/package.xml` declares Apache-2.0 for that package, but a separate upstream mesh license has not been verified. Keep their upstream provenance; asset redistribution licensing remains an integration documentation check.
 
-The Phase 1 model resolves meshes relative to the **source** sibling `rebotarm_bringup`. Phase 2 must resolve the installed bringup share path when generating/installing the model. Isolated colcon prefixes must not be assumed to have the same sibling layout. The generator's `--description` and `--output` arguments support that future step.
+Source models reference the sibling `rebotarm_bringup` meshes explicitly. The launch prepares temporary models with absolute installed asset paths, including scene assets, so isolated colcon prefixes do not need the same sibling layout. The generator's `--description` and `--output` arguments support source regeneration.
 
 ## Physics decisions
 
@@ -131,7 +206,7 @@ MuJoCo uses convex hulls for mesh collision. One hull around an entire link asse
 
 The generator separates each collision STL into disconnected solids and generates a hull per solid. Four concave elbow side plates need further subdivision: components 1/2 of `link2.STL` and 0/1 of `link4.STL`, using the current meshes' sorted connected components. Their triangles are clipped into X slabs at most 10 mm wide before constructing hulls. This removes the artificial link2/link4 overlap seen with whole-assembly hulls at home, while retaining the source surfaces. The indices are specific to the current DM assets; rerun validation after changing those assets.
 
-These contact shapes are conservative approximations, not exact convex decompositions. Fine gripper contact and physical grasping still need Phase 5 validation. The floor is at `z=-0.002 m`, just beneath the fixed base.
+These contact shapes are conservative approximations, not exact convex decompositions. Fine gripper contact and physical grasping still need Phase 5 validation. In `dm_empty.xml` the floor is at `z=-0.002 m`. In the new table scene, the tabletop is at Z = 0 and the floor is at Z = -0.8 m.
 
 Intentional body-pair contact exclusions:
 
@@ -202,10 +277,10 @@ python3 tools/validate_model.py --probe /tmp/dm_model_probe_315 \
 Both validators are headless. To inspect a particular run, or render a reference image with a display available:
 
 ```bash
-/tmp/dm_model_probe models/dm_scene.xml ready 5 open
-/tmp/dm_model_probe models/dm_scene.xml ready 5 close
-/tmp/dm_model_probe models/dm_scene.xml ready 5 release
-/tmp/dm_model_probe_315 models/dm_scene.xml pose_a 0 hold /tmp/dm_pose_a.ppm
+/tmp/dm_model_probe models/dm_empty.xml ready 5 open
+/tmp/dm_model_probe models/dm_empty.xml ready 5 close
+/tmp/dm_model_probe models/dm_empty.xml ready 5 release
+/tmp/dm_model_probe_315 models/dm_empty.xml pose_a 0 hold /tmp/dm_pose_a.ppm
 ```
 
 `release` disables all actuators for an unpowered gravity-fall check. It is not a control command for ordinary operation.

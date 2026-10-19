@@ -27,12 +27,21 @@
   <exec_depend>moveit_simple_controller_manager</exec_depend>
   <exec_depend>rviz2</exec_depend>
   <exec_depend>rclpy</exec_depend>
+  <exec_depend>rcl_interfaces</exec_depend>
+  <exec_depend>rosgraph_msgs</exec_depend>
+  <exec_depend>controller_manager_msgs</exec_depend>
   <exec_depend>action_msgs</exec_depend>
   <exec_depend>geometry_msgs</exec_depend>
   <exec_depend>sensor_msgs</exec_depend>
   <exec_depend>shape_msgs</exec_depend>
   <exec_depend>moveit_msgs</exec_depend>
   <exec_depend>rebotarm_msgs</exec_depend>
-  <test_depend>trajectory_msgs</test_depend>
+  <exec_depend>trajectory_msgs</exec_depend>
+  <exec_depend>control_msgs</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
+  <exec_depend>std_srvs</exec_depend>
+  <exec_depend>mujoco_ros2_control_plugins</exec_depend>
+  <exec_depend>mujoco_ros2_control_msgs</exec_depend>
+
   <export><build_type>ament_python</build_type></export>
 </package>
